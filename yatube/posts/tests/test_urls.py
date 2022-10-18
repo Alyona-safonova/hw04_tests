@@ -1,8 +1,6 @@
-from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
 
 from ..models import Post, Group, User
-
 
 
 class PostURLTests(TestCase):
@@ -10,7 +8,7 @@ class PostURLTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username='auth')
-        cls.user1 = User.objects.create_user(username ='leo')
+        cls.user1 = User.objects.create_user(username='leo')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -41,14 +39,14 @@ class PostURLTests(TestCase):
         self.authorized_client.force_login(self.user)
         self.author = Client()
         self.author.force_login(self.user1)
-    
+
     def test_exists_at_desired_location(self):
         """Тестируем страницы доступные всем."""
         for address in self.templates:
             with self.subTest(address):
                 response = self.guest_client.get(address)
                 self.assertEqual(response.status_code, 200)
-    
+
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
         for url, template in self.templates_url_names.items():
@@ -86,6 +84,8 @@ class PostURLTests(TestCase):
         self.assertTemplateUsed(response, 'posts/create_post.html')
 
     def test_edit_for_authorized_client(self):
-        """проверяем, что не автор поста (даже если это залогиненный пользователь) не может редактировать пост (происходит редирект)."""
-        response = self.authorized_client.get(f'/posts/{self.post.id}/edit/', follow=True)
+        """проверяем, что не автор поста не может редактировать пост."""
+        response = self.authorized_client.get(
+            f'/posts/{self.post.id}/edit/', follow=True
+        )
         self.assertRedirects(response, f'/posts/{self.post.id}/')

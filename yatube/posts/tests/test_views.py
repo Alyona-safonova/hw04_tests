@@ -30,7 +30,8 @@ class PostPagesTests(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_pages_uses_correct_template(self):
-        """проверяем, что во view-функциях используются правильные html-шаблоны."""
+        """проверяем, что во view-функциях используются
+        правильные html-шаблоны."""
         templates_pages_names = {
             reverse("posts:index"): "posts/index.html",
             reverse(
@@ -123,12 +124,11 @@ class PostPagesTests(TestCase):
             response = self.authorized_client.get(page)
             post = response.context['page_obj'][0]
             self.check_card_of_post(post)
-    
+
     def check_card_of_post(self, post):
         self.assertEqual(post.text, self.post.text)
         self.assertEqual(post.author.username, self.user.username)
         self.assertEqual(post.group.id, self.group.id)
-
 
 
 class PaginatorViewsTest(TestCase):
@@ -149,14 +149,13 @@ class PaginatorViewsTest(TestCase):
             )
             for i in range(1, 15)
         ]
-        Post.objects.bulk_create(objs = posts)
-        
+        Post.objects.bulk_create(objs=posts)
 
     def setUp(self):
         self.guest_client = Client()
         self.author = Client()
         self.author.force_login(self.user)
-    
+
     def test_first_page_contains_ten_records(self):
         """Паджинатор тест страницы 1."""
         response = self.author.get(reverse('posts:index'))
