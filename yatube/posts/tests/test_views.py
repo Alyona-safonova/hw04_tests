@@ -30,6 +30,7 @@ class PostPagesTests(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_pages_uses_correct_template(self):
+        """проверяем, что во view-функциях используются правильные html-шаблоны."""
         templates_pages_names = {
             reverse("posts:index"): "posts/index.html",
             reverse(
@@ -52,30 +53,40 @@ class PostPagesTests(TestCase):
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
-    def test_view_context_page(self):
-        post = Post.objects.all()
-        pages_list = (
-            reverse("posts:index"),
-            reverse("posts:group_posts", kwargs={"slug": self.group.slug}),
-            reverse("posts:profile", kwargs={"username": self.post.author})
+    def test_index_show_correct_context(self):
+        """Шаблон index сформирован с правильным контекстом."""
+        response = self.guest_client.get(reverse("posts:index"))
+        expected = list(Post.objects.all()[:10])
+        self.assertEqual(list(response.context["page_obj"]), expected)
+        self.check_card_of_post(response.context["page_obj"][0])
+
+    def test_group_list_show_correct_context(self):
+        """Шаблон group_list сформирован с правильным контекстом."""
+        response = self.guest_client.get(
+            reverse("posts:group_posts", kwargs={"slug": self.group.slug})
         )
-        for reverse_name in pages_list:
-            with self.subTest(reverse_name=reverse_name):
-                response = self.authorized_client.get(reverse_name)
-                self.assertEqual(
-                    response.context['page_obj'][0].text,
-                    post.get(id=response.context['page_obj'][0].id).text
-                )
+        expected = list(Post.objects.filter(group_id=self.group.id)[:10])
+        self.assertEqual(list(response.context["page_obj"]), expected)
+        self.check_card_of_post(response.context["page_obj"][0])
+
+    def test_profile_show_correct_context(self):
+        """Шаблон profile сформирован с правильным контекстом."""
+        response = self.guest_client.get(
+            reverse("posts:profile", args=(self.post.author,))
+        )
+        expected = list(Post.objects.filter(author_id=self.user.id)[:10])
+        self.assertEqual(list(response.context["page_obj"]), expected)
+        self.check_card_of_post(response.context["page_obj"][0])
 
     def test_post_detail_show_correct_context(self):
+        """Шаблон post_detail сформирован с правильным контекстом."""
         response = self.authorized_client.get(
             reverse("posts:post_detail", kwargs={"post_id": self.post.id})
         )
-        self.assertEqual(response.context.get("post").text, self.post.text)
-        self.assertEqual(response.context.get("post").author, self.post.author)
-        self.assertEqual(response.context.get("post").group, self.post.group)
+        self.check_card_of_post(response.context.get("post"))
 
-    def test_create_edit_show_correct_context(self):
+    def test_edit_show_correct_context(self):
+        """Шаблон edit сформирован с правильным контекстом."""
         response = self.authorized_client.get(
             reverse("posts:post_edit", kwargs={"post_id": self.post.id})
         )
@@ -87,8 +98,10 @@ class PostPagesTests(TestCase):
             with self.subTest(value=value):
                 form_field = response.context.get("form").fields.get(value)
                 self.assertIsInstance(form_field, expected)
+                self.assertTrue(response.context.get("is_edit"))
 
     def test_create_show_correct_context(self):
+        """Шаблон create сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse("posts:post_create"))
         form_fields = {
             "text": forms.fields.CharField,
@@ -100,7 +113,7 @@ class PostPagesTests(TestCase):
                 self.assertIsInstance(form_field, expected)
 
     def test_create_post_in_pages(self):
-        group_id = PostPagesTests.group.id
+        """Дополнительная проверка при создании поста."""
         pages = (
             reverse("posts:index"),
             reverse("posts:group_posts", kwargs={'slug': 'test-slug'}),
@@ -109,12 +122,13 @@ class PostPagesTests(TestCase):
         for page in pages:
             response = self.authorized_client.get(page)
             post = response.context['page_obj'][0]
-            post_text = post.text
-            post_author = post.author
-            post_group = post.group
-            self.assertEqual(post_text, 'Тестовый пост')
-            self.assertEqual(post_author.username, 'auth')
-            self.assertEqual(post_group.id, group_id)
+            self.check_card_of_post(post)
+    
+    def check_card_of_post(self, post):
+        self.assertEqual(post.text, self.post.text)
+        self.assertEqual(post.author.username, self.user.username)
+        self.assertEqual(post.group.id, self.group.id)
+
 
 
 class PaginatorViewsTest(TestCase):
@@ -127,22 +141,28 @@ class PaginatorViewsTest(TestCase):
             slug='test-slug',
             description='Тестовое описание'
         )
-        for i in range(1, 15):
-            cls.post = Post.objects.create(
+        posts = [
+            Post(
                 author=cls.user,
                 text='Тестовый пост {i}',
                 group=cls.group
             )
+            for i in range(1, 15)
+        ]
+        Post.objects.bulk_create(objs = posts)
+        
 
     def setUp(self):
         self.guest_client = Client()
         self.author = Client()
         self.author.force_login(self.user)
-
+    
     def test_first_page_contains_ten_records(self):
+        """Паджинатор тест страницы 1."""
         response = self.author.get(reverse('posts:index'))
         self.assertEqual(len(response.context['page_obj']), 10)
 
     def test_second_page_contains_three_records(self):
+        """Паджинатор тест страницы 2."""
         response = self.author.get(reverse('posts:index') + '?page=2')
         self.assertEqual(len(response.context['page_obj']), 4)

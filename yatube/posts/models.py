@@ -26,7 +26,8 @@ class Post(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='posts',
-        verbose_name='Автор'
+        verbose_name='Автор',
+        help_text='Введите имя автора'
     )
     group = models.ForeignKey(
         Group,
