@@ -57,8 +57,6 @@ class PostPagesTests(TestCase):
     def test_index_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.guest_client.get(reverse("posts:index"))
-        expected = list(Post.objects.all()[:10])
-        self.assertEqual(list(response.context["page_obj"]), expected)
         self.check_card_of_post(response.context["page_obj"][0])
 
     def test_group_list_show_correct_context(self):
@@ -66,17 +64,15 @@ class PostPagesTests(TestCase):
         response = self.guest_client.get(
             reverse("posts:group_posts", kwargs={"slug": self.group.slug})
         )
-        expected = list(Post.objects.filter(group_id=self.group.id)[:10])
-        self.assertEqual(list(response.context["page_obj"]), expected)
         self.check_card_of_post(response.context["page_obj"][0])
+        self.assertIn('group', response.context)
 
     def test_profile_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
         response = self.guest_client.get(
             reverse("posts:profile", args=(self.post.author,))
         )
-        expected = list(Post.objects.filter(author_id=self.user.id)[:10])
-        self.assertEqual(list(response.context["page_obj"]), expected)
+        self.assertIn('author', response.context)
         self.check_card_of_post(response.context["page_obj"][0])
 
     def test_post_detail_show_correct_context(self):
@@ -84,6 +80,7 @@ class PostPagesTests(TestCase):
         response = self.authorized_client.get(
             reverse("posts:post_detail", kwargs={"post_id": self.post.id})
         )
+        self.assertIn('post', response.context)
         self.check_card_of_post(response.context.get("post"))
 
     def test_edit_show_correct_context(self):
@@ -91,6 +88,8 @@ class PostPagesTests(TestCase):
         response = self.authorized_client.get(
             reverse("posts:post_edit", kwargs={"post_id": self.post.id})
         )
+        self.assertIn('form', response.context)
+        self.assertTrue(response.context.get("is_edit"))
         form_fields = {
             "text": forms.fields.CharField,
             "group": forms.fields.ChoiceField,
@@ -99,7 +98,6 @@ class PostPagesTests(TestCase):
             with self.subTest(value=value):
                 form_field = response.context.get("form").fields.get(value)
                 self.assertIsInstance(form_field, expected)
-                self.assertTrue(response.context.get("is_edit"))
 
     def test_create_show_correct_context(self):
         """Шаблон create сформирован с правильным контекстом."""

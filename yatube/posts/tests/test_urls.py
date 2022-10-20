@@ -18,7 +18,7 @@ class PostURLTests(TestCase):
             author=cls.user1,
             text='Тестовый пост'
         )
-        cls.templates = [
+        cls.url_names = [
             "/",
             f"/group/{cls.group.slug}/",
             f"/profile/{cls.user}/",
@@ -42,7 +42,7 @@ class PostURLTests(TestCase):
 
     def test_exists_at_desired_location(self):
         """Тестируем страницы доступные всем."""
-        for address in self.templates:
+        for address in self.url_names:
             with self.subTest(address):
                 response = self.guest_client.get(address)
                 self.assertEqual(response.status_code, 200)
@@ -59,27 +59,25 @@ class PostURLTests(TestCase):
         response = self.guest_client.get('/unexisting_page/')
         self.assertEqual(response.status_code, 404)
 
-    def test_create_url_redirect_anonymous_on_auth_login(self):
-        """Страница /create/ не доступна неавторизованному пользователю."""
-        response = self.guest_client.get('/create/', follow=True)
-        self.assertRedirects(response, '/auth/login/?next=/create/')
+    def test_list_url_redirect_guest(self):
+        """Проверяем редиректы для неавторизованного пользователя."""
+        url_names_redirects = {
+            f'/posts/{self.post.id}/edit/':
+                f'/auth/login/?next=/posts/{self.post.id}/edit/',
+            '/create/': '/auth/login/?next=/create/',
+        }
+        for address, redirect_address in url_names_redirects.items():
+            with self.subTest(address=address):
+                response = self.guest_client.get(address, follow=True)
+                self.assertRedirects(response, redirect_address)
 
-    def test_post_edit_url_redirect_anonymous_on_auth_login(self):
-        """Страница /edit/ не доступна неавторизованному пользователю."""
-        response = self.guest_client.get(
-            f'/posts/{self.post.id}/edit/', follow=True
-        )
-        self.assertRedirects(
-            response, f'/auth/login/?next=/posts/{self.post.id}/edit/'
-        )
-
-    def test_post_create_authorized_client(self):
-        """Страница /create/ доступна авторизованному пользователю."""
+    def test_post_create_for_authorized_client(self):
+        """Проверяем, что авторизованный пользователь может создавать пост."""
         response = self.authorized_client.get('/create/')
         self.assertTemplateUsed(response, 'posts/create_post.html')
 
     def test_post_edit_for_author(self):
-        """Страница /edit/ доступна только автору."""
+        """Проверяем, что автор может редактировать пост"""
         response = self.author.get(f'/posts/{self.post.id}/edit/')
         self.assertTemplateUsed(response, 'posts/create_post.html')
 
