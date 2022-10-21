@@ -72,14 +72,15 @@ class PostURLTests(TestCase):
                 self.assertRedirects(response, redirect_address)
 
     def test_post_create_for_authorized_client(self):
-        """Проверяем, что авторизованный пользователь может создавать пост."""
+        """Проверяем, что авторизованному пользователю
+        доступно создание поста."""
         response = self.authorized_client.get('/create/')
-        self.assertTemplateUsed(response, 'posts/create_post.html')
+        self.assertEqual(response.status_code, 200)
 
     def test_post_edit_for_author(self):
-        """Проверяем, что автор может редактировать пост"""
+        """Проверяем, что автору доступно редактирование поста."""
         response = self.author.get(f'/posts/{self.post.id}/edit/')
-        self.assertTemplateUsed(response, 'posts/create_post.html')
+        self.assertEqual(response.status_code, 200)
 
     def test_edit_for_authorized_client(self):
         """проверяем, что не автор поста не может редактировать пост."""
